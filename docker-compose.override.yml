@@ -1,0 +1,15 @@
+# Local development overrides
+services:
+  coding-github:
+    environment:
+      # Both names, deliberately: CODING_GITHUB_ENVIRONMENT drives this service's
+      # own Settings (validation bypasses, schemathesis guard), the unprefixed one
+      # drives coding_client's AuthMiddleware dev API-key path. Setting only the
+      # bare name would leave this service resolving to its "production" default.
+      CODING_GITHUB_ENVIRONMENT: development
+      ENVIRONMENT: development
+      LOG_LEVEL: DEBUG
+      ENABLE_DOCS: "true"
+      ENABLE_AUTH: "false"
+    volumes:
+      - ./src:/app/src:ro

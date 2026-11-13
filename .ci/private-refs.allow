@@ -1,0 +1,9 @@
+# Allowlist for scripts/no-private-refs.sh — one rule per line:
+#     path/glob:pattern   # why this line is safe to publish
+#
+# `\.internal` is an unanchored ERE, so it also matches Python identifiers that
+# merely start with "internal_". These are model field and module names, not hosts.
+*:internal_endpoint        # RepositoryInfo field name
+*:internal_caller          # Settings.internal_callers / request.state.internal_caller
+*:internal_service_token   # Settings field name for the caller-vouch token
+*:\.netloc                 # urlsplit().netloc — the guard's `ts\.net` rule matches "parts.netloc"

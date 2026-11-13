@@ -1,0 +1,155 @@
+[project]
+name = "coding-github"
+version = "1.0.0"
+license = { text = "Apache-2.0" }
+description = "GitHub integration service for Code Graph Helper - repo provisioning, dual-token fork/PR workflows, webhooks, PR validation"
+authors = [{name = "Nonagentic", email = "dev@nonagentic.ai"}]
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.35.0",
+    "gunicorn>=23.0.0",
+    "pydantic>=2.12.5",
+    "pydantic-settings>=2.12.0",
+    "httpx>=0.28.0",
+    "structlog==26.1.0",
+    "sqlalchemy[asyncio]>=2.0",
+    "psycopg[binary,pool]>=3.2.0",
+    # Schema migrations for the coding_github DB (CI-checks wait store); applied by
+    # the Deployment's `alembic upgrade head` initContainer, as coding-containers.
+    "alembic>=1.16.0",
+    "coding-client>=1.19.0",  # >=1.11.0: outbound `service_token=`; >=1.19.0: CodingWorkspacesClient (typed /api/workspaces routes), imported by this service
+    # GitHub-specific
+    "PyGithub>=2.6.1",
+    "aiohttp>=3.14.4",  # CVE-2026-34993, CVE-2026-47265 (fixed in 3.14.0)
+    # OpenTelemetry
+    "opentelemetry-api>=1.45.1",  # CVE-2026-114603 fixed in 1.45.1
+    "opentelemetry-sdk>=1.24.0",
+    "opentelemetry-exporter-otlp-proto-http>=1.24.0",
+    "opentelemetry-instrumentation-fastapi>=0.53b1",
+    # Security floor: pin urllib3 ≥ 2.7.0 for CVE-2026-44431 + CVE-2026-44432
+    "urllib3>=2.8.0",
+    # Security floor: pin starlette ≥ 1.0.1 for PYSEC-2026-161
+    "starlette>=1.0.1",
+    # Security floor: pin pyasn1 ≥ 0.6.4 for PYSEC-2026-3455/3456/3457.
+    # Transitive (pyasn1-modules ← google-auth); floored here because the
+    # archetype's pip-audit gate is repo-scoped.
+    "pyasn1>=0.6.4",
+]
+
+[project.optional-dependencies]
+dev = [
+    # Same hold as the dev group below: pytest 9.2.0 breaks pydantic PrivateAttr monkeypatching.
+    "pytest==9.1.1",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "ruff==0.15.14",
+    "ty==0.0.39",
+]
+
+[build-system]
+requires = ["setuptools>=75.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[dependency-groups]
+dev = [
+    # ⛔ HELD at 9.1.1: pytest 9.2.0 breaks monkeypatching pydantic PrivateAttr.
+    # MonkeyPatch.setattr now saves the old value from `target.__dict__`, but pydantic
+    # keeps private attrs in `__pydantic_private__`, so it records NOTSET and `undo()`
+    # calls delattr — permanently deleting the attribute. The cached get_settings()
+    # singleton then loses `_platform_repo_grants` after the first fixture using it,
+    # and every later `monkeypatch.setattr(settings, "_platform_repo_grants", ...)`
+    # raises AttributeError (209 errors, tests/unit/test_tenant_repo_token.py).
+    # Revisit when pytest fixes the fallout of its #10644 change.
+    "pytest==9.1.1",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "ruff==0.15.14",
+    "detect-secrets",
+    "pip-audit>=2.10.0",
+    # PYSEC-2026-3721: pip 26.1.2 is vulnerable (transitive via pip-audit -> pip-api -> pip); explicit floor so a re-lock cannot regress
+    "pip>=26.2",
+    "ty==0.0.39",
+]
+
+[tool.uv]
+# CVE-2026-84379/84380/84382 (httpx2) and CVE-2026-84381 (httpcore2) are unfixed in the
+# 2.3.0 that resolution selects transitively via pydantic-ai-slim -> genai-prices
+# (`httpx2>=2.0`, so nothing upstream caps it). pip-audit fails the build on them.
+# Constrained rather than pinned: the floor rises, and normal resolution still applies.
+# CVE-2026-107287/107289-107295 (pydantic-ai 1.107.0, transitive via coding-client): every fix
+# on the 1.x line is in 1.107.7, so the floor is that; slim moves with it.
+constraint-dependencies = [
+    "httpx2>=2.12.0",
+    "httpcore2>=2.12.0",
+    "pydantic-ai>=1.107.7",
+    "pydantic-ai-slim>=1.107.7",
+    # 2026-10-26 pip-audit (same fix as coding-gateway#102 / coding-client#66): fastmcp
+    # GHSA-7xgj-8392-5q4r (fix 3.4.10), filelock CVE-2026-112907/112913/112940 (fix 4.2.1),
+    # opentelemetry-api CVE-2026-114603 (fix 1.45.1; floored in [project].dependencies).
+    "fastmcp>=3.4.10",
+    "filelock>=4.2.1",
+    # otel-api 1.45.1 pins otel-semantic-conventions ==0.66b1, which mistralai <=2.9.0 caps
+    # at <0.61; left free, uv jumps mistralai 2->3 (httpx -> httpx2 rewrite). Never imported
+    # here (transitive via coding-client -> pydantic-ai[mistral]); hold 2.x.
+    "mistralai<3",
+]
+
+[tool.uv.sources]
+coding-client = { git = "https://github.com/nonagenticai/coding-client", rev = "f7f25b4e81fe4390586108a7a731608dacf462fd" }
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "W", "UP"]
+ignore = ["E501"]
+
+# Accepted-risk bandit suppressions (honoured by CI via `-c pyproject.toml`).
+# B108: hardcoded /tmp paths are deliberate — best-effort notification fallback
+# (github_webhooks.py) and ephemeral repo-clone staging (pr_validation_engine.py),
+# not security-sensitive temp-file creation. No untrusted input lands in these paths.
+[tool.bandit]
+skips = ["B108"]
+
+[tool.ty]
+
+[tool.ty.src]
+include = ["src"]
+
+
+[tool.ty.environment]
+python-version = "3.14"
+
+[tool.ty.rules]
+unresolved-import = "ignore"
+unresolved-attribute = "ignore"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+pythonpath = ["src"]
+testpaths = ["tests"]
+addopts = "-v --cov=src --cov-report=term-missing --cov-fail-under=85 -m 'not integration'"
+filterwarnings = [
+    "ignore:cannot collect test class 'TestImpact':pytest.PytestCollectionWarning",
+]
+markers = [
+    "integration: marks tests as integration tests",
+    "unit: marks tests as unit tests",
+    "e2e: marks tests as end-to-end tests",
+    # Opts OUT of the suite-wide "andon cord is released" default in
+    # tests/conftest.py so the real fail-closed guard runs. NOT a skip marker:
+    # the tests carrying it always execute.
+    "andon_live: exercise the real services.andon read path, unmocked",
+]
+
+[tool.coverage.run]
+source = ["src"]
+concurrency = ["greenlet", "thread"]
+
+[tool.coverage.report]
+fail_under = 85

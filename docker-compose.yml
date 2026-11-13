@@ -1,0 +1,51 @@
+services:
+  coding-github:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: coding-github
+
+    environment:
+      SERVICE_NAME: coding-github
+      VERSION: 1.0.0
+      # This service reads its own environment as CODING_GITHUB_ENVIRONMENT
+      # (Settings.model_config env_prefix). The unprefixed ENVIRONMENT below is
+      # NOT redundant: coding_client's AuthMiddleware reads the bare name to gate
+      # its dev API-key path. Keep the two in step.
+      CODING_GITHUB_ENVIRONMENT: production
+      ENVIRONMENT: production
+      LOG_LEVEL: INFO
+      LOG_FORMAT: json
+      PORT: 8692
+      DEFAULT_TENANT_ID: n8n-dev
+      ENABLE_AUTH: "true"
+      ENABLE_DOCS: "true"
+
+      # Database
+      DATABASE_URL: postgresql+psycopg://coding:${POSTGRES_PASSWORD:-coding}@postgres:5432/code_graph
+      PGBOUNCER_URL: postgresql+psycopg://coding:${POSTGRES_PASSWORD:-coding}@pgbouncer:6432/code_graph
+
+      # OpenTelemetry
+      OTLP_TRACES_ENDPOINT: http://grafana-agent:4318/v1/traces
+      OTEL_SERVICE_NAME: coding-github
+      OTEL_SDK_DISABLED: "false"
+
+    ports:
+      - "0.0.0.0:8692:8692"
+
+    networks:
+      - workflow-system-network
+
+    restart: unless-stopped
+
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8692/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+networks:
+  workflow-system-network:
+    driver: bridge

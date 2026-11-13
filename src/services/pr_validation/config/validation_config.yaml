@@ -1,0 +1,221 @@
+# PR Validation System Configuration
+# This file configures the comprehensive pull request validation system
+
+# Validation Engine Configuration
+validation_engine:
+  # Enable/disable different validation phases
+  enable_diff_analysis: true
+  enable_semantic_analysis: true
+  enable_impact_assessment: true
+  enable_security_analysis: true
+  enable_performance_analysis: true
+  enable_maintainability_analysis: true
+
+  # Timeout settings (in seconds)
+  overall_timeout: 300  # 5 minutes total
+  analyzer_timeout: 60  # 1 minute per analyzer
+
+  # Analysis intensity (1-5, where 5 is most thorough)
+  analysis_intensity: 3
+
+  # Risk thresholds for determining risk levels
+  risk_thresholds:
+    low: 2.0
+    medium: 5.0
+    high: 8.0
+    critical: 10.0
+
+# Risk Calculator Configuration
+risk_calculator:
+  # Dimension weights (must sum to 1.0)
+  dimension_weights:
+    security: 0.25
+    performance: 0.15
+    maintainability: 0.15
+    reliability: 0.20
+    compatibility: 0.15
+    complexity: 0.05
+    impact_scope: 0.05
+
+  # Issue severity weights
+  severity_weights:
+    critical: 4.0
+    high: 2.5
+    medium: 1.5
+    low: 0.5
+
+  # Change type risk multipliers
+  change_type_multipliers:
+    COMPLETE_REWRITE: 2.0
+    MAJOR: 1.5
+    MODERATE: 1.0
+    MINOR: 0.5
+
+  # File type risk factors
+  file_type_risks:
+    python: 1.0
+    javascript: 1.1
+    typescript: 1.0
+    yaml: 1.2  # Config files are riskier
+    json: 1.2
+    dockerfile: 1.3
+    unknown: 0.8
+
+# Security Analysis Configuration
+security_analysis:
+  # Enable security pattern detection
+  enable_pattern_detection: true
+  enable_secret_detection: true
+  enable_vulnerability_scanning: true
+
+  # Security patterns to detect
+  dangerous_functions:
+    - eval
+    - exec
+    - compile
+    - __import__
+    - os.system
+    - subprocess.call
+
+  # Cryptographic patterns
+  weak_crypto:
+    - md5
+    - sha1
+    - des
+    - rc4
+
+  strong_crypto:
+    - sha256
+    - sha512
+    - aes
+    - rsa
+
+# Performance Analysis Configuration
+performance_analysis:
+  # Complexity thresholds
+  cyclomatic_complexity_threshold: 15
+  nesting_depth_threshold: 4
+  function_length_threshold: 100
+
+  # Performance patterns to detect
+  detect_nested_loops: true
+  detect_db_queries_in_loops: true
+  detect_inefficient_algorithms: true
+  detect_memory_issues: true
+
+# Maintainability Analysis Configuration
+maintainability_analysis:
+  # Code quality thresholds
+  complexity_thresholds:
+    cyclomatic_complexity:
+      low: 10
+      medium: 15
+      high: 20
+    function_length:
+      low: 50
+      medium: 100
+      high: 150
+    class_length:
+      low: 200
+      medium: 400
+      high: 600
+    parameter_count:
+      low: 5
+      medium: 7
+      high: 10
+    nesting_depth:
+      low: 3
+      medium: 4
+      high: 5
+
+  # Code smells to detect
+  code_smells:
+    detect_long_methods: true
+    detect_long_parameter_lists: true
+    detect_duplicate_code: true
+    detect_magic_numbers: true
+    detect_god_classes: true
+    detect_dead_code: true
+
+# GitHub Integration Configuration
+github_integration:
+  # API-specific settings
+  api_timeout: 120  # 2 minutes for API responsiveness
+  analyzer_timeout: 30  # 30 seconds per analyzer for API use
+  analysis_intensity: 3  # Moderate intensity for API use
+
+  # Legacy validation fallback
+  enable_legacy_fallback: true
+
+  # Validation triggers
+  triggers:
+    # Use comprehensive validation when:
+    multiple_validation_types: true  # More than 2 types requested
+    comprehensive_keyword: true     # "comprehensive" in validation_types
+    advanced_keyword: true          # "advanced" in validation_types
+    large_pr_threshold: 20          # More than 20 files changed
+
+# Recommendation System Configuration
+recommendations:
+  # Maximum recommendations to generate
+  max_recommendations: 10
+
+  # Priority thresholds
+  priority_weights:
+    critical: 10.0
+    high: 5.0
+    medium: 2.0
+    low: 1.0
+
+  # Template categories to enable
+  categories:
+    security: true
+    performance: true
+    maintainability: true
+    testing: true
+    documentation: true
+    architecture: true
+    process: true
+
+# File Processing Configuration
+file_processing:
+  # File size limits (in bytes)
+  max_file_size: 1048576  # 1MB
+  max_total_size: 10485760  # 10MB
+
+  # File types to analyze
+  supported_languages:
+    - python
+    - javascript
+    - typescript
+    - java
+    - cpp
+    - c
+
+  # Patterns to ignore
+  ignore_patterns:
+    - "*.min.js"
+    - "*.min.css"
+    - "node_modules/*"
+    - ".git/*"
+    - "__pycache__/*"
+    - "*.pyc"
+    - "dist/*"
+    - "build/*"
+
+# Logging Configuration
+logging:
+  level: INFO
+  enable_detailed_logging: false
+  log_analysis_time: true
+  log_performance_metrics: true
+
+# Feature Flags
+feature_flags:
+  enable_ast_analysis: true
+  enable_breaking_change_detection: true
+  enable_dependency_analysis: true
+  enable_test_coverage_analysis: true
+  enable_documentation_checking: true
+  enable_risk_scoring: true
+  enable_recommendation_generation: true

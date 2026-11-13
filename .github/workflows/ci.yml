@@ -1,0 +1,57 @@
+name: CI
+
+# The public pipeline: nonagenticai/ci-workflows/python-service.yml on GitHub-hosted runners,
+# with no repository secrets, publishing ghcr.io/nonagenticai/coding-github from main.
+#
+# There is no deploy job. Flux watches the ImagePolicy for this service and rolls it when the
+# image changes — the repo never holds cluster credentials.
+#
+# While this repository was private it ran the private deployment archetype; that job is gone
+# rather than gated because GitHub parses a called workflow even when the calling job's `if:`
+# is false, so a public repository that keeps a private `uses:` cannot dispatch CI at all.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    uses: nonagenticai/ci-workflows/.github/workflows/python-service.yml@main
+    permissions:
+      contents: read
+      packages: write
+    with:
+      image_name: coding-github
+      src_dir: src
+      # Per-job ephemeral postgres:18 sidecar + `alembic upgrade head`: the CI-checks
+      # wait store (ci_waits) is tested against real Postgres, not a mock.
+      has_postgres: true
+      database_name: coding_github_ci
+      alembic: true
+      # checks/ oracles sit outside pytest testpaths (pytest checks/ collects 0,
+      # exit 5), so they never gated a build. checks.diff_parser_rename_copy grades the
+      # defect fixed in #93: rc=0 on the fix, rc=1 with named assertion failures on its parent.
+      oracle_modules: checks.diff_parser_rename_copy
+      # Multi-arch builds crossed the old 30-min cap under runner contention.
+      build_timeout_minutes: 50
+      # Preserve the bespoke /health smoke against the freshly-pushed image.
+      build_smoke: |
+        docker run -d --name smoke-coding-github \
+          -e ENABLE_AUTH=false \
+          -e CODING_GITHUB_ENVIRONMENT=testing \
+          -p 18692:8692 "$IMAGE_REF"
+        ok=0
+        for i in $(seq 1 30); do
+          if curl -sf http://localhost:18692/health >/dev/null 2>&1; then
+            echo "health ok (attempt $i)"; ok=1; break
+          fi
+          sleep 1
+        done
+        docker logs smoke-coding-github || true
+        docker rm -f smoke-coding-github || true
+        [ "$ok" -eq 1 ]

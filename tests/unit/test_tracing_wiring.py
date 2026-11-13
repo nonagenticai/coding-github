@@ -129,9 +129,7 @@ def test_a_real_request_through_the_real_app_produces_a_span(
 
     monkeypatch.setattr(trace, "_TRACER_PROVIDER", None, raising=False)
     monkeypatch.setattr(trace, "_TRACER_PROVIDER_SET_ONCE", Once(), raising=False)
-    monkeypatch.setenv(
-        "OTLP_TRACES_ENDPOINT", "http://tempo.tempo.svc.cluster.local:4318/v1/traces"
-    )
+    monkeypatch.setenv("OTLP_TRACES_ENDPOINT", "http://localhost:4318/v1/traces")
 
     exporter = InMemorySpanExporter()
     real_add = TracerProvider.add_span_processor

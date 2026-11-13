@@ -40,7 +40,7 @@ dependencies = [
 [project.optional-dependencies]
 dev = [
     # Same hold as the dev group below: pytest 9.2.0 breaks pydantic PrivateAttr monkeypatching.
-    "pytest==9.1.1",
+    "pytest==9.2.0",
     "pytest-asyncio>=0.24.0",
     "pytest-cov>=6.0.0",
     "ruff==0.15.14",
@@ -64,7 +64,7 @@ dev = [
     # and every later `monkeypatch.setattr(settings, "_platform_repo_grants", ...)`
     # raises AttributeError (209 errors, tests/unit/test_tenant_repo_token.py).
     # Revisit when pytest fixes the fallout of its #10644 change.
-    "pytest==9.1.1",
+    "pytest==9.2.0",
     "pytest-asyncio>=0.24.0",
     "pytest-cov>=6.0.0",
     "ruff==0.15.14",

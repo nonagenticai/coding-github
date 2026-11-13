@@ -1,5 +1,9 @@
 # coding-github
 
+[![CI](https://github.com/nonagenticai/coding-github/actions/workflows/ci.yml/badge.svg)](https://github.com/nonagenticai/coding-github/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/nonagenticai/coding-github)](https://github.com/nonagenticai/coding-github/releases)
+[![License: Apache-2.0](https://img.shields.io/badge/license-Apache--2.0-blue.svg)](LICENSE)
+
 GitHub integration service for the Code Graph Helper platform. Owns remote GitHub concerns: repository import and access validation, credentials, forks, commits to forks, pull requests, webhooks, and automated PR validation. Checked-out repository lifecycle and local code operations belong to `coding-containers`' canonical `/api/workspaces` API.
 
 **Port:** 8692
@@ -285,3 +289,19 @@ docker compose up -d
 GitHub Actions workflow: `ruff + ty → build amd64 → smoke test → push`
 
 Image pushed to `192.168.1.114:5000/coding-github:sha-<commit>`, promoted to `:latest` on success. Flux auto-deploys to K3s.
+
+## Security
+
+Report vulnerabilities privately through the repository's Security tab — see
+[`SECURITY.md`](SECURITY.md). Do not open a public issue for a security problem.
+
+## Contributing
+
+Issues and pull requests are welcome. See
+[`CONTRIBUTING.md`](https://github.com/nonagenticai/.github/blob/main/CONTRIBUTING.md) for the
+organisation-wide rules; setup, test and lint commands are in this README. Commits carry DCO
+sign-off.
+
+## License
+
+Apache-2.0 — see [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE).

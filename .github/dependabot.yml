@@ -14,6 +14,13 @@ updates:
         update-types: ["minor", "patch"]
     ignore:
       - dependency-name: ty
+      # pytest 9.2 breaks every test that monkeypatches a pydantic PrivateAttr on Settings:
+      # the monkeypatch undo calls pydantic's __delattr__, which raises when the key is not in
+      # __pydantic_private__ (reproduced: 53 passed on 9.1.1, 52 errors on 9.2.0 in
+      # tests/unit/test_sandbox_org.py). Lift this once _patch_all() sets and restores through
+      # obj.__pydantic_private__ instead of monkeypatch.setattr.
+      - dependency-name: pytest
+        versions: [">=9.2"]
   - package-ecosystem: github-actions
     directory: "/"
     schedule:

@@ -37,8 +37,10 @@ try:
 
     HAS_GITHUB = True
 except ImportError:  # pragma: no cover - exercised only when PyGithub absent
-    Auth = None  # type: ignore[invalid-assignment]  # ty: ignore[invalid-assignment]
-    GithubIntegration = None  # type: ignore[invalid-assignment]  # ty: ignore[invalid-assignment]
+    # `Any`, not `type[X] | None`: placeholders for an absent optional dependency.
+    # HAS_GITHUB gates the use, so the union case is not a real state.
+    Auth: Any = None
+    GithubIntegration: Any = None
     HAS_GITHUB = False
 
 logger = logging.getLogger(__name__)
@@ -587,10 +589,13 @@ def _assert_minted_repo_owner(payload: object, expected_owner: str, owner: str, 
     repos = body.get("repositories")
     seen: list[str] = []
     if isinstance(repos, list):
-        for r in repos:
-            r = r if isinstance(r, dict) else {}
-            o = r.get("owner") if isinstance(r.get("owner"), dict) else {}
-            seen.append(f"{o.get('login') or '?'}/{r.get('name') or '?'}")
+        for entry in repos:
+            repo_dict = cast("dict[str, Any]", entry) if isinstance(entry, dict) else {}
+            owner_value = repo_dict.get("owner")
+            owner_dict = (
+                cast("dict[str, Any]", owner_value) if isinstance(owner_value, dict) else {}
+            )
+            seen.append(f"{owner_dict.get('login') or '?'}/{repo_dict.get('name') or '?'}")
     want = f"{expected_owner.strip().lower()}/{repo.strip().lower()}"
     if [x.lower() for x in seen] != [want]:
         logger.error(

@@ -24,11 +24,14 @@ try:
 
     HAS_GITHUB = True
 except ImportError:
+    # `Any`, not `type[X] | None`: placeholders for an absent optional dependency.
+    # Keeping the real classes in the union turns every downstream call and
+    # attribute access into a union-case error. HAS_GITHUB gates the use.
     HAS_GITHUB = False
-    Auth = None  # type: ignore[invalid-assignment]  # ty: ignore[invalid-assignment]
-    Github = None  # type: ignore[invalid-assignment]  # ty: ignore[invalid-assignment]
-    GithubException = Exception  # type: ignore[invalid-assignment]  # ty: ignore[invalid-assignment]
-    Repository = None  # type: ignore[invalid-assignment]  # ty: ignore[invalid-assignment]
+    Auth: Any = None
+    Github: Any = None
+    GithubException: Any = Exception
+    Repository: Any = None
 
 FixValidator = None  # Stub for patching in tests
 

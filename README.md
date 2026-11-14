@@ -35,12 +35,13 @@ Auth is provided by `coding-client` middleware, NOT Keycloak/JWT.
 - `/health` and `/` are exempt from auth
 - CORS handled by FastAPI CORSMiddleware (Istio handles mesh-level CORS in production)
 
-### Dual-Token Architecture
+### GitHub App Authentication
 
-The service supports a dual-token workflow for private repositories:
+There is no platform personal access token in settings (removed by owner ruling, 2026-09-30). Platform calls are made as a GitHub App, and a tenant's own BYO token is resolved per request rather than read from settings:
 
-1. **User token** -- provided during provisioning to validate access to private repos. Stored encrypted via `SecureTokenManager`. Used later to create upstream PRs back to the user's repo.
-2. **System token** (`CODING_GITHUB_SYSTEM_GITHUB_TOKEN`) -- used for @nonagenticai organization operations: forking, committing, pushing, triggering GitHub Actions.
+1. **Internal App** -- `CODING_GITHUB_GITHUB_APP_ID` plus its private key (`CODING_GITHUB_GITHUB_APP_PRIVATE_KEY_PATH`, or the inline key for dev/test) serves platform repositories under `CODING_GITHUB_SYSTEM_GITHUB_OWNER` (`nonagenticai`).
+2. **Public App via fr tenant binding** -- the only identity that may mint a token for a customer repository outside the system owner. fr records which tenant owns each installation, and a token is issued only when the installation is bound to the requesting tenant.
+3. **BYO user token** -- provided during provisioning to validate access to private repos, stored encrypted via `SecureTokenManager`, and used later to create upstream PRs back to the user's repo.
 
 ## API Routes
 
@@ -159,21 +160,21 @@ or any unrecognised value (including `ALL`) means `outcome_only`.
 
 ## Configuration
 
-All environment variables use the `CODING_GITHUB_` prefix (via pydantic-settings `env_prefix`).
+Service-specific environment variables use the `CODING_GITHUB_` prefix (via pydantic-settings `env_prefix`); the shared/base variables below are unprefixed.
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `CODING_GITHUB_DATABASE_URL` | `postgresql+psycopg://coding_github:pass@pgbouncer...:6432/coding_github` | PostgreSQL connection string (async psycopg) |
-| `CODING_GITHUB_GITHUB_TOKEN` | (empty) | GitHub PAT for API calls |
-| `CODING_GITHUB_GITHUB_APP_ID` | (empty) | GitHub App ID (alternative to PAT) |
-| `CODING_GITHUB_GITHUB_APP_PRIVATE_KEY` | (empty) | GitHub App private key |
+| `CODING_GITHUB_DATABASE_URL` | (empty) | PostgreSQL connection string (SQLAlchemy async + psycopg). Required in production: boot fails if unset. |
+| `CODING_GITHUB_GITHUB_APP_ID` | (empty) | GitHub App ID |
+| `CODING_GITHUB_GITHUB_APP_INSTALLATION_ID` | (empty) | GitHub App installation ID |
+| `CODING_GITHUB_GITHUB_APP_PRIVATE_KEY` | (empty) | GitHub App private key (inline; dev/test fallback) |
+| `CODING_GITHUB_GITHUB_APP_PRIVATE_KEY_PATH` | (empty) | Path to the mounted GitHub App private-key PEM (preferred over the inline key) |
 | `CODING_GITHUB_GITHUB_WEBHOOK_SECRET` | (empty) | Secret for webhook signature verification |
-| `CODING_GITHUB_SYSTEM_GITHUB_TOKEN` | (empty) | System token for @nonagenticai operations |
 | `CODING_GITHUB_SYSTEM_GITHUB_OWNER` | `nonagenticai` | System GitHub org/account |
 | `CODING_GITHUB_CODING_CONTAINERS_URL` | `http://coding-containers:8691` | coding-containers service URL |
 | `CODING_GITHUB_CODING_SECURITY_URL` | `http://coding-security:8693` | coding-security service URL |
 | `CODING_GITHUB_CODING_ANALYSIS_URL` | `http://coding-analysis:8688` | coding-analysis service URL |
-| `CODING_GITHUB_SECRETS_API_URL` | `https://secrets-api:8543` | Secrets API URL |
+| `CODING_GITHUB_SECRETS_API_URL` | (empty) | Secrets API URL. Required in production: boot fails if unset. |
 | `CODING_GITHUB_CA_CERT_PATH` | `/certs/ca-cert.pem` | CA cert for secrets API TLS |
 | `CODING_GITHUB_WEBHOOK_MODE` | `outcome_only` | `outcome_only` or `all` (exact, lowercase); anything else = `outcome_only`. See "Webhook mode". |
 | `CODING_GITHUB_OUTCOME_FORWARD_URL` | (empty) | n8n `aa-github-outcome` webhook URL. Empty disables outcome forwarding. |
@@ -204,11 +205,11 @@ src/
     github_api_integration.py      -- Container lookup, PR validation helpers (no routes)
     github_validation_utils.py     -- Security/performance/quality PR validators (no routes)
   services/
-    github_integration.py          -- PyGithub wrapper: fork, branch, file CRUD, PR creation (dual-token)
+    github_integration.py          -- PyGithub wrapper: fork, branch, file CRUD, PR creation (App + per-tenant token)
     github_provisioning.py         -- GitHub-aware import orchestration + workspace HTTP adapter
-    github_container_provisioner.py -- Dual-token provisioning: validates repo, stores user token
+    github_container_provisioner.py -- App-first provisioning: validates repo, stores user token
     github_validation.py           -- Repository/branch/PR access validation via GitHub API
-    github_token_manager.py        -- Dual-token architecture: system + per-user encrypted tokens
+    github_token_manager.py        -- Per-user (BYO) encrypted token storage; no platform PAT
     github_integration_core.py     -- Facade hub: clone, sync, PR analysis, webhook handling
     github_actions_trigger.py      -- Triggers GitHub Actions workflows (comprehensive PR validation)
     github/
@@ -286,14 +287,13 @@ docker compose up -d
 
 ## CI/CD
 
-GitHub Actions workflow: `ruff + ty → build amd64 → smoke test → push`
+GitHub Actions workflow: `nonagenticai/ci-workflows/python-service.yml` — lint + type check, pytest against a Postgres 18 sidecar with `alembic upgrade head`, multi-arch build, `/health` smoke test, push to GHCR. There is no deploy job: Flux watches the ImagePolicy and rolls the service when the image changes.
 
-Image pushed to `192.168.1.114:5000/coding-github:sha-<commit>`, promoted to `:latest` on success. Flux auto-deploys to K3s.
+Image pushed to `ghcr.io/nonagenticai/coding-github:sha-<commit>`, tagged `:latest` on a main build.
 
 ## Security
 
-Report vulnerabilities privately through the repository's Security tab — see
-[`SECURITY.md`](SECURITY.md). Do not open a public issue for a security problem.
+Report vulnerabilities privately through the repository's Security tab. Do not open a public issue for a security problem.
 
 ## Contributing
 
@@ -318,4 +318,4 @@ enforcement point). Neither is required to run this code.
 
 ## License
 
-Apache-2.0 — see [`LICENSE`](LICENSE) and [`NOTICE`](NOTICE).
+Apache-2.0 — see [`LICENSE`](LICENSE).

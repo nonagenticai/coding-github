@@ -334,7 +334,7 @@ def handle_github_error(
         import inspect
 
         if inspect.iscoroutinefunction(func):
-            return async_wrapper  # type: ignore[return-value]  # ty: ignore[invalid-return-type]
+            return async_wrapper  # type: ignore[return-value]  # ty: ignore[invalid-explicit-return]
         return sync_wrapper
 
     return decorator

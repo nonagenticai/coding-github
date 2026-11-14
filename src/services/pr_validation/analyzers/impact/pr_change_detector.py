@@ -437,7 +437,7 @@ class PRChangeDetector:
 
         # Analyze file types
         for change in changes:
-            file_type = change.file_type.value if change.file_type else "unknown"
+            file_type = change.file_type.value
             metadata["file_types"][file_type] = metadata["file_types"].get(file_type, 0) + 1
 
         # Analyze change distribution

@@ -6,7 +6,7 @@ from __future__ import annotations
 
 import logging
 import os
-from typing import TYPE_CHECKING, NamedTuple
+from typing import TYPE_CHECKING, Any, NamedTuple
 from urllib.parse import urlparse
 
 if TYPE_CHECKING:
@@ -19,10 +19,13 @@ try:
 
     HAS_GITHUB = True
 except ImportError:
+    # `Any`, not `type[X] | None`: these are placeholders for an absent optional
+    # dependency, so keeping the real classes in the union makes every call and
+    # attribute access downstream a union-case error. HAS_GITHUB gates the use.
     HAS_GITHUB = False
-    Auth = None  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
-    Github = None  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
-    GithubException = Exception  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
+    Auth: Any = None
+    Github: Any = None
+    GithubException: Any = Exception
 
 from coding_client.exceptions.api_exceptions import NotFoundException, ValidationException
 from coding_client.models.container import GitHubRepoRequest

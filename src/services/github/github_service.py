@@ -24,7 +24,9 @@ try:
     HAS_AIOHTTP = True
 except ImportError:
     HAS_AIOHTTP = False
-    aiohttp = None  # type: ignore[invalid-assignment]  # ty: ignore[invalid-assignment]
+    # `Any`, not `module | None`: placeholder for an absent optional dependency.
+    # HAS_AIOHTTP gates the use, so the union case is not a real state.
+    aiohttp: Any = None
 
 try:
     from github import Github, GithubException, RateLimitExceededException
@@ -32,11 +34,14 @@ try:
 
     HAS_GITHUB = True
 except ImportError:
+    # `Any`, not `type[X] | None`: placeholders for an absent optional dependency.
+    # Keeping the real classes in the union turns every downstream call and
+    # attribute access into a union-case error. HAS_GITHUB gates the use.
     HAS_GITHUB = False
-    Github = None  # type: ignore[invalid-assignment]  # ty: ignore[invalid-assignment]
-    GithubException = Exception  # type: ignore[invalid-assignment]  # ty: ignore[invalid-assignment]
-    RateLimitExceededException = Exception  # type: ignore[invalid-assignment]  # ty: ignore[invalid-assignment]
-    Repository = None  # type: ignore[invalid-assignment]  # ty: ignore[invalid-assignment]
+    Github: Any = None
+    GithubException: Any = Exception
+    RateLimitExceededException: Any = Exception
+    Repository: Any = None
 from coding_client.models.github import PRFileChange, PullRequest
 from pydantic import BaseModel
 
@@ -1451,19 +1456,18 @@ class GitHubService:
             raw_files = list(comparison.files or [])
             if len(raw_files) >= GITHUB_COMPARE_FILES_CAP:
                 raise CompareFilesTruncatedError(len(raw_files))
-            files = sorted(
-                (
-                    {
-                        "filename": f.filename,
-                        "status": f.status,
-                        "previous_filename": (
-                            f.previous_filename if f.status == "renamed" else None
-                        ),
-                    }
-                    for f in raw_files
-                ),
-                key=lambda item: item["filename"],
-            )
+            # Sort the raw files by filename (a plain `str`) rather than sorting
+            # the shaped dicts: the shaped values are `str | None`
+            # (previous_filename), so a dict-key sort hands `sorted` a union it
+            # cannot prove is ordered.
+            files = [
+                {
+                    "filename": f.filename,
+                    "status": f.status,
+                    "previous_filename": (f.previous_filename if f.status == "renamed" else None),
+                }
+                for f in sorted(raw_files, key=lambda f: f.filename)
+            ]
             status = comparison.status
             return {
                 "status": status,

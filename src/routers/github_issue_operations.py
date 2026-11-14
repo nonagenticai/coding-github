@@ -20,7 +20,7 @@ operation names from exactly that field.
 from __future__ import annotations
 
 import logging
-from collections.abc import AsyncIterator
+from collections.abc import AsyncGenerator
 from contextlib import AsyncExitStack, asynccontextmanager
 
 from coding_client.auth.tenant import require_tenant
@@ -60,7 +60,7 @@ async def _github(
     repo: str | None = None,
     tenant_id: str | None = None,
     permissions: dict[str, str] | None = None,
-) -> AsyncIterator[GitHubService]:
+) -> AsyncGenerator[GitHubService]:
     """Open a GitHubService on the App-first credential ladder.
 
     This used to read the platform PAT setting directly (since removed, 2026-09-30).

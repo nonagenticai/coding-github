@@ -636,7 +636,7 @@ async def mint_clone_token(request: CloneTokenRequest, http_request: Request) ->
     return CloneTokenResponse(
         token=token,
         expires_at=expires_at,
-        visibility=visibility,  # type: ignore[invalid-argument-type]  # ty: ignore[invalid-argument-type]
+        visibility=visibility,
         source=source,
         reason=reason,
         private=private,

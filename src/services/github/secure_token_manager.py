@@ -37,9 +37,11 @@ try:
 except ImportError:
     logger.warning("cryptography module not available - GitHub token encryption disabled")
     CRYPTOGRAPHY_AVAILABLE = False
-    Fernet = None  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
-    hashes = None  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
-    PBKDF2HMAC = None  # type: ignore[assignment]  # ty: ignore[invalid-assignment]
+    # `Any`, not `type[X] | None`: placeholders for an absent optional dependency.
+    # CRYPTOGRAPHY_AVAILABLE gates the use, so the union case is not a real state.
+    Fernet: Any = None
+    hashes: Any = None
+    PBKDF2HMAC: Any = None
 
 
 class TokenStatus(StrEnum):

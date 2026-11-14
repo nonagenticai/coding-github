@@ -663,7 +663,9 @@ def mint_public_repo_token(
     )
 
 
-def get_repo_visibility(owner: str, repo: str, token: str | None = None) -> str:
+def get_repo_visibility(
+    owner: str, repo: str, token: str | None = None
+) -> Literal["public", "private"]:
     """Return ``"public"`` or ``"private"`` for ``owner/repo``.
 
     coding-github is the only coding-* service with egress to api.github.com, so
